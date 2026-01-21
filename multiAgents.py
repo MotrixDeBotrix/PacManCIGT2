@@ -91,7 +91,7 @@ class ReflexAgent(Agent):
         foodList = newFood.asList()
         if foodList:
             closestFoodDist = min(manhattanDistance(newPos, food) for food in foodList)
-            score += 1.0 / (closestFoodDist + 1)
+            score += 10.0 / (closestFoodDist + 1)
         
         # Evaluate ghost positions
         for i in range(len(newGhostStates)):
@@ -216,7 +216,48 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
         Returns the minimax action using self.depth and self.evaluationFunction
         """
         "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+        def alphabetapruning(state, depth, agentIndex, alpha=float('-inf'), beta=float('inf')):
+            if state.isWin() or state.isLose() or depth == 0:
+                return self.evaluationFunction(state), None
+            
+            numAgents = state.getNumAgents()
+            nextAgent = (agentIndex + 1) % numAgents
+            nextDepth = depth - 1 if nextAgent == 0 else depth
+            
+            legalActions = state.getLegalActions(agentIndex)
+            
+            if agentIndex == 0:
+                bestValue = float('-inf')
+                bestAction = None
+                for action in legalActions:
+                    successor = state.generateSuccessor(agentIndex, action)
+                    value, _ = alphabetapruning(successor, nextDepth, nextAgent, alpha, beta)
+                    if value > bestValue:
+                        bestValue = value
+                        bestAction = action
+
+                    alpha = max(alpha, bestValue)
+                    if alpha >= beta:
+                        break
+                return bestValue, bestAction
+            else:  
+                bestValue = float('inf')
+                bestAction = None
+                for action in legalActions:
+                    successor = state.generateSuccessor(agentIndex, action)
+                    value, _ = alphabetapruning(successor, nextDepth, nextAgent, alpha, beta)
+                    beta = min(beta, value)
+                    if value < bestValue:
+                        bestValue = value
+                        bestAction = action
+
+                    beta = min(beta, bestValue)
+                    if beta <= alpha:
+                        break
+                return bestValue, bestAction
+        
+        _, action = alphabetapruning(gameState, self.depth, 0, float('-inf'), float('inf'))
+        return action
 
 class ExpectimaxAgent(MultiAgentSearchAgent):
     """
