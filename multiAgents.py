@@ -272,9 +272,53 @@ class ExpectimaxAgent(MultiAgentSearchAgent):
         legal moves.
         """
         "*** YOUR CODE HERE ***"
-        def expectimax():
-            if gameState.isWin() or gameState.isLose() or self.depth == 0:
-                return self.evaluationFunction(gameState), None
+        def expectimax(state, depth, agentIndex):
+            if state.isWin() or state.isLose() or depth == 0:
+                return self.evaluationFunction(state)
+
+            numAgents = state.getNumAgents()
+
+            if agentIndex == 0:
+                bestValue = float("-inf")
+                for action in state.getLegalActions(agentIndex):
+                    successor = state.generateSuccessor(agentIndex, action)
+                    value = expectimax(successor, depth, 1)
+                    bestValue = max(bestValue, value)
+                return bestValue
+
+            else:
+                actions = state.getLegalActions(agentIndex)
+                if not actions:
+                    return self.evaluationFunction(state)
+
+                prob = 1.0 / len(actions)
+                expectedValue = 0
+
+                nextAgent = agentIndex + 1
+                nextDepth = depth
+                if nextAgent == numAgents:
+                    nextAgent = 0
+                    nextDepth -= 1
+
+                for action in actions:
+                    successor = state.generateSuccessor(agentIndex, action)
+                    value = expectimax(successor, nextDepth, nextAgent)
+                    expectedValue += prob * value
+
+                return expectedValue
+
+        bestScore = float("-inf")
+        bestAction = None
+
+        for action in gameState.getLegalActions(0):
+            successor = gameState.generateSuccessor(0, action)
+            value = expectimax(successor, self.depth, 1)
+            if value > bestScore:
+                bestScore = value
+                bestAction = action
+
+        return bestAction
+
 
 def betterEvaluationFunction(currentGameState: GameState):
     """
