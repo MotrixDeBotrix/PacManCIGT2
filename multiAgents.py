@@ -273,11 +273,12 @@ class ExpectimaxAgent(MultiAgentSearchAgent):
         """
         "*** YOUR CODE HERE ***"
         def expectimax(state, depth, agentIndex):
-            if state.isWin() or state.isLose() or depth == 0:
+            if state.isWin() or state.isLose() or depth == 0: #Check for some basic conditions, no use in continuing if one of these is true
                 return self.evaluationFunction(state)
 
             numAgents = state.getNumAgents()
 
+            #Choose the action for pacman with the best value based on its successors
             if agentIndex == 0:
                 bestValue = float("-inf")
                 for action in state.getLegalActions(agentIndex):
@@ -286,6 +287,7 @@ class ExpectimaxAgent(MultiAgentSearchAgent):
                     bestValue = max(bestValue, value)
                 return bestValue
 
+            #This is for the ghosts, we start by calculating the average value of all actions
             else:
                 actions = state.getLegalActions(agentIndex)
                 if not actions:
@@ -296,6 +298,8 @@ class ExpectimaxAgent(MultiAgentSearchAgent):
 
                 nextAgent = agentIndex + 1
                 nextDepth = depth
+
+                #After all ghosts have had their turn, we go back to pacman but at a decreased depth level
                 if nextAgent == numAgents:
                     nextAgent = 0
                     nextDepth -= 1
@@ -307,6 +311,7 @@ class ExpectimaxAgent(MultiAgentSearchAgent):
 
                 return expectedValue
 
+        #Root of the recursion, choosing the best action for pacman
         bestScore = float("-inf")
         bestAction = None
 
