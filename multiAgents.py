@@ -237,7 +237,7 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
                         bestAction = action
 
                     alpha = max(alpha, bestValue)
-                    if alpha >= beta:
+                    if alpha > beta:
                         break
                 return bestValue, bestAction
             else:  
@@ -252,7 +252,7 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
                         bestAction = action
 
                     beta = min(beta, bestValue)
-                    if beta <= alpha:
+                    if beta < alpha:
                         break
                 return bestValue, bestAction
         
