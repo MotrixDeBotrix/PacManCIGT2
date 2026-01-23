@@ -75,24 +75,43 @@ class ReflexAgent(Agent):
         newScaredTimes = [ghostState.scaredTimer for ghostState in newGhostStates]
 
         "*** YOUR CODE HERE ***"
+        # Start with the game score as base
         score = successorGameState.getScore()
 
-        if newFood:
-            foodDistances = [manhattanDistance(newPos, food) for food in newFood]
-            score += 10 / min(foodDistances)
-        score -= 4 * len(newFood.asList())
-
-        for ghost, scaredTime in zip(newGhostStates, newScaredTimes):
-            ghostDist = manhattanDistance(newPos, ghost.getPosition())
-
-            if scaredTime > 0:
-                score += 200 / (ghostDist + 1)
+        # print(successorGameState)
+        # print(score)
+        # print(newPos)
+        # print(newFood)
+        # print(newGhostStates)
+        # for ghost in newGhostStates:
+        #     print(f"Ghost at {ghost.getPosition()}, scared timer: {ghost.scaredTimer}")
+        # print(newScaredTimes)
+        
+        # Get food list and calculate distance to closest food
+        foodList = newFood.asList()
+        if foodList:
+            closestFoodDist = min(manhattanDistance(newPos, food) for food in foodList)
+            score += 1.0 / (closestFoodDist + 1)
+        
+        # Evaluate ghost positions
+        for i in range(len(newGhostStates)):
+            ghostState = newGhostStates[i]
+            ghostPos = ghostState.getPosition()
+            ghostDist = manhattanDistance(newPos, ghostPos)
+            
+            if newScaredTimes[i] > 0:
+                if ghostDist > 0:
+                    score += 2.0 / ghostDist
             else:
                 if ghostDist <= 1:
                     score -= 500
-                else:
-                    score -= 20 / ghostDist
-
+                elif ghostDist <= 2:
+                    score -= 50
+        
+        # Penalize stopping
+        if action == Directions.STOP:
+            score -= 10
+        
         return score
 
 def scoreEvaluationFunction(currentGameState: GameState):
@@ -153,8 +172,39 @@ class MinimaxAgent(MultiAgentSearchAgent):
         gameState.isLose():
         Returns whether or not the game state is a losing state
         """
-        "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+        def minimax(state, depth, agentIndex):
+            if state.isWin() or state.isLose() or depth == 0:
+                return self.evaluationFunction(state), None
+            
+            numAgents = state.getNumAgents()
+            nextAgent = (agentIndex + 1) % numAgents
+            nextDepth = depth - 1 if nextAgent == 0 else depth
+            
+            legalActions = state.getLegalActions(agentIndex)
+            
+            if agentIndex == 0:
+                bestValue = float('-inf')
+                bestAction = None
+                for action in legalActions:
+                    successor = state.generateSuccessor(agentIndex, action)
+                    value, _ = minimax(successor, nextDepth, nextAgent)
+                    if value > bestValue:
+                        bestValue = value
+                        bestAction = action
+                return bestValue, bestAction
+            else:  
+                bestValue = float('inf')
+                bestAction = None
+                for action in legalActions:
+                    successor = state.generateSuccessor(agentIndex, action)
+                    value, _ = minimax(successor, nextDepth, nextAgent)
+                    if value < bestValue:
+                        bestValue = value
+                        bestAction = action
+                return bestValue, bestAction
+        
+        _, action = minimax(gameState, self.depth, 0)
+        return action
 
 class AlphaBetaAgent(MultiAgentSearchAgent):
     """
@@ -166,7 +216,6 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
         Returns the minimax action using self.depth and self.evaluationFunction
         """
         "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
 
 class ExpectimaxAgent(MultiAgentSearchAgent):
     """
@@ -181,7 +230,9 @@ class ExpectimaxAgent(MultiAgentSearchAgent):
         legal moves.
         """
         "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+        def expectimax():
+            if gameState.isWin() or gameState.isLose() or self.depth == 0:
+                return self.evaluationFunction(gameState), None
 
 def betterEvaluationFunction(currentGameState: GameState):
     """
