@@ -91,7 +91,7 @@ class ReflexAgent(Agent):
         foodList = newFood.asList()
         if foodList:
             closestFoodDist = min(manhattanDistance(newPos, food) for food in foodList)
-            score += 1.0 / (closestFoodDist + 1)
+            score += 10.0 / (closestFoodDist + 1)
         
         # Evaluate ghost positions
         for i in range(len(newGhostStates)):
@@ -216,6 +216,48 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
         Returns the minimax action using self.depth and self.evaluationFunction
         """
         "*** YOUR CODE HERE ***"
+        def alphabetapruning(state, depth, agentIndex, alpha=float('-inf'), beta=float('inf')):
+            if state.isWin() or state.isLose() or depth == 0:
+                return self.evaluationFunction(state), None
+            
+            numAgents = state.getNumAgents()
+            nextAgent = (agentIndex + 1) % numAgents
+            nextDepth = depth - 1 if nextAgent == 0 else depth
+            
+            legalActions = state.getLegalActions(agentIndex)
+            
+            if agentIndex == 0:
+                bestValue = float('-inf')
+                bestAction = None
+                for action in legalActions:
+                    successor = state.generateSuccessor(agentIndex, action)
+                    value, _ = alphabetapruning(successor, nextDepth, nextAgent, alpha, beta)
+                    if value > bestValue:
+                        bestValue = value
+                        bestAction = action
+
+                    alpha = max(alpha, bestValue)
+                    if alpha >= beta:
+                        break
+                return bestValue, bestAction
+            else:  
+                bestValue = float('inf')
+                bestAction = None
+                for action in legalActions:
+                    successor = state.generateSuccessor(agentIndex, action)
+                    value, _ = alphabetapruning(successor, nextDepth, nextAgent, alpha, beta)
+                    beta = min(beta, value)
+                    if value < bestValue:
+                        bestValue = value
+                        bestAction = action
+
+                    beta = min(beta, bestValue)
+                    if beta <= alpha:
+                        break
+                return bestValue, bestAction
+        
+        _, action = alphabetapruning(gameState, self.depth, 0, float('-inf'), float('inf'))
+        return action
 
 class ExpectimaxAgent(MultiAgentSearchAgent):
     """
@@ -239,10 +281,63 @@ def betterEvaluationFunction(currentGameState: GameState):
     Your extreme ghost-hunting, pellet-nabbing, food-gobbling, unstoppable
     evaluation function (question 5).
 
-    DESCRIPTION: <write something here so we know what you did>
+    DESCRIPTION: The 'better evaluation function' had, for me, a lot in common with 
+    the earlier evaluation function. The one thing I added was the second calculation
+    for score in the food calculations, in which states are preferred when there is less 
+    food. Pac Man now also goes for capsules. Food is still preferred, as that way the 
+    game ends quicker and stays under the 30 seconds mark. I questioned myself if maybe 
+    the capsules should give higher scores, but using the autograder there was not much 
+    difference between scores that much when I changed it, thus I stuck with what kept 
+    working in the first place. Don't change a winning team. The ghost calculations are 
+    also quite simple. Has a capsule been eaten and are the ghosts scared, then go after 
+    them, if they are in the vicinity. The closer they are, the better it is to target 
+    them. If a ghost is nearby which isn't scared, avoid them the closer they are. Is it
+    right next to Pac Man (as seen in the dist < 1, return -999999), never choose that state
+    unless there is no other option. 
+    During testing I also saw it standing still a lot. To avoid that, I checked the previous
+    position of Pac Man. If that was the same as the current one, it would have a negative
+    impact on the score.
     """
-    "*** YOUR CODE HERE ***"
-    util.raiseNotDefined()
+    # Score to calculate with
+    score = currentGameState.getScore()
+
+    pacmanPos = currentGameState.getPacmanPosition()
+    foodList = currentGameState.getFood().asList()
+    ghostStates = currentGameState.getGhostStates()
+    capsules = currentGameState.getCapsules()
+
+    # Avoid standing still
+    prevPos = currentGameState.getPacmanState().getPosition()
+    if pacmanPos == prevPos:
+        score -= 5
+
+    # Calculation for targeting food
+    if foodList:
+        closestFoodDist = min(manhattanDistance(pacmanPos, food) for food in foodList)
+        score += 10.0 / (closestFoodDist + 1)
+        score -= 4 * len(foodList)
+
+    # Calculation for targeting powerUps
+    if capsules:
+        closestCapsuleDist = min(manhattanDistance(pacmanPos, cap) for cap in capsules)
+        score += 3.0 / (closestCapsuleDist + 1)
+
+    # Calculation for targeting and avoiding ghosts
+    for ghost in ghostStates:
+        ghostPos = ghost.getPosition()
+        dist = manhattanDistance(pacmanPos, ghostPos)
+
+        # If ghosts are scared, go after them
+        if ghost.scaredTimer > 0:
+            if dist > 0:
+                score += 200.0 / dist
+        # If ghosts are not scared, avoid them. Avoid being too close to them, seen in the if-statement
+        else:
+            if dist <= 1:
+                return -999999
+            score -= 10.0 / dist
+
+    return score
 
 # Abbreviation
 better = betterEvaluationFunction
